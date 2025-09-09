@@ -11,7 +11,6 @@ import {
   hubspot
 } from '@hubspot/ui-extensions';
 
-// Hook customizado para o contexto
 hubspot.extend(({ context, runServerlessFunction, actions }) => (
   <JourneyBoardExtension
     context={context}
@@ -25,7 +24,7 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Definição das fases
+  // Definição das fases conforme documento
   const stages = [
     {
       id: 'PROSPECTING',
@@ -58,7 +57,6 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
       setLoading(true);
       setError(null);
       
-      // Determinar se estamos em um Deal ou Contact
       const isDeal = context.crm.objectTypeId === '0-3';
       const isContact = context.crm.objectTypeId === '0-1';
       
@@ -71,7 +69,7 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
         contactId = context.crm.objectId;
       }
 
-      // Chamar a função serverless
+      // Chamar a função serverless correta
       const result = await runServerless({
         name: 'analyzeJourney',
         parameters: {
@@ -82,43 +80,19 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
 
       if (result.response && result.response.body) {
         setJourney(result.response.body);
-      } else {
-        // Dados mockados para desenvolvimento
-        setJourney({
-          dealId: dealId || 'mock-deal',
-          contactId: contactId || 'mock-contact',
-          stage: 'PROSPECTING',
-          substage: 'QUALIFICATION',
-          stageName: 'Prospecção',
-          substageName: 'Qualificação',
-          score: 35,
-          indicators: ['Alto engajamento', 'Boa taxa de abertura'],
-          recommendations: ['Agendar apresentação', 'Enviar case de sucesso'],
-          metadata: {
-            daysInCurrentStage: 5,
-            dealAmount: 50000,
-            contactName: 'Cliente Exemplo'
-          }
+        sendAlert({
+          type: 'success',
+          message: 'Jornada analisada com sucesso!'
         });
+      } else {
+        throw new Error('Resposta inválida da função serverless');
       }
     } catch (err) {
       console.error('Erro ao carregar jornada:', err);
       setError('Erro ao carregar dados da jornada');
-      
-      // Usar dados mock em caso de erro
-      setJourney({
-        stage: 'PROSPECTING',
-        substage: 'INITIAL_CONTACT',
-        stageName: 'Prospecção',
-        substageName: 'Contato Inicial',
-        score: 20,
-        indicators: [],
-        recommendations: ['Iniciar contato'],
-        metadata: {
-          daysInCurrentStage: 1,
-          dealAmount: 0,
-          contactName: 'Novo Lead'
-        }
+      sendAlert({
+        type: 'danger',
+        message: 'Erro ao analisar jornada: ' + err.message
       });
     } finally {
       setLoading(false);
@@ -146,7 +120,22 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
   if (loading) {
     return (
       <Box padding="md">
-        <Text>Carregando jornada do cliente...</Text>
+        <Text>⏳ Analisando jornada do cliente...</Text>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box padding="md">
+        <Alert title="Erro" variant="danger">
+          {error}
+        </Alert>
+        <Box>
+          <Button onClick={loadJourneyData} variant="primary">
+            Tentar Novamente
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -157,6 +146,11 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
         <Alert title="Sem dados" variant="info">
           Nenhuma jornada encontrada para este registro.
         </Alert>
+        <Box>
+          <Button onClick={loadJourneyData} variant="secondary">
+            Analisar Jornada
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -166,17 +160,21 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
       {/* Header com Score */}
       <Flex direction="row" justify="between" align="start" gap="md">
         <Box>
-          <Text format={{ fontWeight: 'bold' }}>
-            Jornada: {journey.metadata?.contactName || 'Cliente'}
+          <Text format={{ fontWeight: 'bold', fontSize: 'lg' }}>
+            📊 Jornada do Cliente
           </Text>
           <Text format={{ fontWeight: 'demibold' }}>
             {journey.stageName} → {journey.substageName}
+          </Text>
+          <Text>
+            {journey.metadata?.contactName || 'Cliente'}
           </Text>
         </Box>
         <Box>
           <Text format={{ fontWeight: 'bold' }}>Score</Text>
           <Text format={{ 
             fontWeight: 'bold', 
+            fontSize: 'xl',
             fontColor: getScoreColor(journey.score) 
           }}>
             {journey.score}/100
@@ -189,7 +187,7 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
 
       {/* Progress Bar */}
       <Box>
-        <Text format={{ fontWeight: 'demibold' }}>Progresso Geral</Text>
+        <Text format={{ fontWeight: 'demibold' }}>Progresso na Jornada</Text>
         <ProgressBar 
           value={getStageProgress()} 
           showPercentage={true}
@@ -199,47 +197,69 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
 
       <Divider distance="md" />
 
-      {/* Tabuleiro Visual */}
+      {/* Tabuleiro Visual estilo Lovable */}
       <Box>
-        <Text format={{ fontWeight: 'bold' }}>📋 Tabuleiro de Fases</Text>
+        <Text format={{ fontWeight: 'bold' }}>📋 Board da Jornada</Text>
         
-        {stages.map((stage) => (
-          <Box key={stage.id} padding="xs">
-            <Flex direction="column" gap="xs">
-              {/* Nome do Stage */}
-              <Flex direction="row" align="center" gap="xs">
-                <Text format={{ 
-                  fontWeight: journey.stage === stage.id ? 'bold' : 'demibold',
-                  fontColor: journey.stage === stage.id ? stage.color : '#33475B'
-                }}>
-                  {stage.name}
-                </Text>
-                {journey.stage === stage.id && (
-                  <Tag variant="warning">
-                    ATUAL
-                  </Tag>
-                )}
-              </Flex>
-              
-              {/* Substages */}
-              <Flex direction="row" gap="xs" wrap="wrap">
-                {stage.substages.map((substage) => {
-                  const isActive = journey.stage === stage.id && 
-                                 journey.substageName === substage;
-                  
-                  return (
-                    <Tag
-                      key={substage}
-                      variant={isActive ? 'warning' : 'default'}
-                    >
-                      {isActive ? '▶ ' : ''}{substage}
+        <Flex direction="row" gap="sm" wrap="wrap">
+          {stages.map((stage) => (
+            <Box 
+              key={stage.id} 
+              padding="sm"
+              style={{
+                border: journey.stage === stage.id ? '2px solid ' + stage.color : '1px solid #E6EAED',
+                borderRadius: '8px',
+                backgroundColor: journey.stage === stage.id ? stage.color + '20' : '#F7F9FA',
+                minWidth: '200px',
+                flex: 1
+              }}
+            >
+              <Flex direction="column" gap="xs">
+                {/* Nome do Stage */}
+                <Flex direction="row" align="center" justify="between">
+                  <Text format={{ 
+                    fontWeight: 'bold',
+                    fontColor: journey.stage === stage.id ? stage.color : '#33475B'
+                  }}>
+                    {stage.name}
+                  </Text>
+                  {journey.stage === stage.id && (
+                    <Tag variant="warning">
+                      ATUAL
                     </Tag>
-                  );
-                })}
+                  )}
+                </Flex>
+                
+                {/* Substages */}
+                <Flex direction="column" gap="xxs">
+                  {stage.substages.map((substage) => {
+                    const isActive = journey.stage === stage.id && 
+                                   journey.substageName === substage;
+                    
+                    return (
+                      <Box
+                        key={substage}
+                        padding="xxs"
+                        style={{
+                          backgroundColor: isActive ? stage.color : 'transparent',
+                          borderRadius: '4px',
+                          color: isActive ? 'white' : '#33475B'
+                        }}
+                      >
+                        <Text format={{ 
+                          fontWeight: isActive ? 'bold' : 'regular',
+                          fontSize: 'sm'
+                        }}>
+                          {isActive ? '▶ ' : '• '}{substage}
+                        </Text>
+                      </Box>
+                    );
+                  })}
+                </Flex>
               </Flex>
-            </Flex>
-          </Box>
-        ))}
+            </Box>
+          ))}
+        </Flex>
       </Box>
 
       {/* Indicadores */}
@@ -274,27 +294,20 @@ const JourneyBoardExtension = ({ context, runServerless, sendAlert }) => {
 
       {/* Metadados */}
       <Divider distance="md" />
-      <Flex direction="row" justify="between">
-        <Text>
-          ⏱ {journey.metadata?.daysInCurrentStage || 0} dias no stage
-        </Text>
-        <Text>
-          💰 R$ {(journey.metadata?.dealAmount || 0).toLocaleString('pt-BR')}
-        </Text>
-      </Flex>
-
-      {/* Botão de Atualização */}
-      <Box>
+      <Flex direction="row" justify="between" align="center">
+        <Flex direction="column">
+          <Text format={{ fontSize: 'sm' }}>
+            ⏱ {journey.metadata?.daysInCurrentStage || 0} dias no stage
+          </Text>
+          <Text format={{ fontSize: 'sm' }}>
+            💰 R$ {(journey.metadata?.dealAmount || 0).toLocaleString('pt-BR')}
+          </Text>
+        </Flex>
+        
         <Button onClick={loadJourneyData} variant="secondary">
-          Atualizar Análise
+          🔄 Atualizar
         </Button>
-      </Box>
-
-      {error && (
-        <Alert title="Aviso" variant="warning">
-          {error}
-        </Alert>
-      )}
+      </Flex>
     </Box>
   );
 };

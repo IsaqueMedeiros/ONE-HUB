@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Board - Integrado HubSpot CLI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            padding: 20px 30px;
+            background: #e8f5e8;
+            border-bottom: 1px solid #c3e6cb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-bar.error {
+            background: #f8d7da;
+            border-bottom-color: #f5c6cb;
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #155724;
+        }
+
+        .status-bar.error .status-text {
+            color: #721c24;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 250px;
+        }
+
+        .select-group label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .select-group select {
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+
+        .select-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 30px;
+            min-height: 400px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+
+        .loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin-bottom: 20px;
+        }
+
+        .data-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .data-item {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .data-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-item-header {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .data-item-details {
+            font-size: 0.9rem;
+            color: #6c757d;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .data-item-tag {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .journey-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stage-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .stage-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stage-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #495057;
+        }
+
+        .stage-card.active .stage-title {
+            color: #667eea;
+        }
+
+        .current-badge {
+            background: #ffc107;
+            color: #212529;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .substages {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .substage {
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .substage.active {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            transform: translateX(10px);
+        }
+
+        .journey-info {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #495057;
+        }
+
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 auto 10px;
+        }
+
+        .score-excellent { background: #28a745; }
+        .score-good { background: #ffc107; color: #212529; }
+        .score-poor { background: #dc3545; }
+
+        .recommendations {
+            margin-top: 20px;
+        }
+
+        .recommendations h3 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .recommendations ul {
+            list-style: none;
+        }
+
+        .recommendations li {
+            padding: 10px 15px;
+            background: #e3f2fd;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .indicators {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .indicator {
+            padding: 6px 12px;
+            background: #17a2b8;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .tab-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .form-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .select-group {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .journey-board {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Journey Board</h1>
+            <p>Integrado com HubSpot CLI - Dados Reais da Sua Conta</p>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            <div class="status-text" id="statusText">
+                🔄 Verificando conexão com HubSpot CLI...
+            </div>
+            <button class="btn btn-secondary" onclick="checkStatus()" id="statusBtn">
+                Verificar Status
+            </button>
+        </div>
+
+        <div class="controls">
+            <div class="tab-container">
+                <button class="tab active" onclick="switchTab('analyze')">📊 Analisar Jornada</button>
+                <button class="tab" onclick="switchTab('deals')">💼 Explorar Deals</button>
+                <button class="tab" onclick="switchTab('contacts')">👥 Explorar Contacts</button>
+                <button class="tab" onclick="switchTab('dashboard')">📈 Dashboard</button>
+            </div>
+
+            <!-- Tab: Analisar Jornada -->
+            <div id="analyzeTab" class="tab-content active">
+                <div class="form-group">
+                    <div class="select-group">
+                        <label for="dealSelect">Selecionar Deal</label>
+                        <select id="dealSelect">
+                            <option value="">Carregando deals...</option>
+                        </select>
+                    </div>
+                    <div class="select-group">
+                        <label for="contactSelect">Contact Associado (opcional)</label>
+                        <select id="contactSelect">
+                            <option value="">Detectar automaticamente</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="analyzeSelectedJourney()">
+                        📊 Analisar Jornada
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab: Explorar Deals -->
+            <div id="dealsTab" class="tab-content">
+                <div class="form-group">
+                    <button class="btn btn-secondary" onclick="loadAllDeals()">
+                        🔄 Recarregar Deals
+                    </button>
+                </div>
+                <div id="dealsList" class="data-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando deals...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Explorar Contacts -->
+            <div id="contactsTab" class="tab-content">
+                <div class="form-group">
+                    <button class="btn btn-secondary" onclick="loadAllContacts()">
+                        🔄 Recarregar Contacts
+                    </button>
+                </div>
+                <div id="contactsList" class="data-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando contacts...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Dashboard -->
+            <div id="dashboardTab" class="tab-content">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalDeals">-</div>
+                        <div class="stat-label">Total de Deals</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalContacts">-</div>
+                        <div class="stat-label">Total de Contacts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="averageScore">-</div>
+                        <div class="stat-label">Score Médio</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="activeClients">-</div>
+                        <div class="stat-label">Clientes Ativos</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="loadDashboardData()">
+                    📊 Atualizar Dashboard
+                </button>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <div style="text-align: center; padding: 60px; color: #6c757d;">
+                <h3>🚀 Pronto para Analisar!</h3>
+                <p>Selecione um Deal ou explore seus dados do HubSpot nas abas acima.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado da aplicação
+        let allDeals = [];
+        let allContacts = [];
+        let currentJourney = null;
+        let cliStatus = { status: 'unknown', message: 'Verificando...' };
+        
+        // Definição das fases
+        const stages = [
+            {
+                id: 'PROSPECTING',
+                name: '🔍 Prospecção',
+                substages: ['Contato Inicial', 'Qualificação', 'Proposta Enviada', 'Negociação']
+            },
+            {
+                id: 'ONBOARDING',
+                name: '🚀 Onboarding',
+                substages: ['Contrato Assinado', 'Setup Iniciado', 'Treinamento', 'Implementação']
+            },
+            {
+                id: 'RELATIONSHIP',
+                name: '🤝 Relacionamento',
+                substages: ['Cliente Ativo', 'Expansão', 'Renovação', 'Advogado']
+            }
+        ];
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                showMessage('Conectando com HubSpot CLI...', 'info');
+                
+                // Verificar status da CLI primeiro
+                await checkStatus();
+                
+                if (cliStatus.status === 'success') {
+                    // Carregar dados iniciais
+                    await Promise.all([
+                        loadDealsForSelect(),
+                        loadContactsForSelect(),
+                        loadAllDeals(),
+                        loadAllContacts()
+                    ]);
+                    
+                    hideMessage();
+                } else {
+                    showError(`Erro de conexão: ${cliStatus.message}`);
+                }
+                
+            } catch (error) {
+                console.error('Erro na inicialização:', error);
+                updateCliStatus('❌ Erro de conexão - Verifique se HubSpot CLI está autenticado', 'error');
+                showError('Erro ao conectar com HubSpot CLI.');
+            }
+        }
+
+        // Verificar status da CLI
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                cliStatus = await response.json();
+                
+                if (cliStatus.status === 'success') {
+                    updateCliStatus('✅ Conectado - HubSpot CLI funcionando', 'success');
+                } else {
+                    updateCliStatus(`❌ ${cliStatus.message}`, 'error');
+                }
+                
+                return cliStatus.status === 'success';
+                
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+                cliStatus = { status: 'error', message: 'Erro de conexão' };
+                updateCliStatus('❌ Erro de conexão com servidor', 'error');
+                return false;
+            }
+        }
+
+        // Atualizar status da CLI na interface
+        function updateCliStatus(message, type = 'success') {
+            const statusBar = document.getElementById('statusBar');
+            const statusText = document.getElementById('statusText');
+            
+            statusText.textContent = message;
+            
+            if (type === 'error') {
+                statusBar.classList.add('error');
+            } else {
+                statusBar.classList.remove('error');
+            }
+        }
+
+        // Gerenciamento de abas
+        function switchTab(tabName) {
+            // Remover classe active de todas as abas
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Ativar aba selecionada
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Carregar deals para o select
+        async function loadDealsForSelect() {
+            try {
+                const response = await fetch('/api/deals');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                allDeals = await response.json();
+                
+                const dealSelect = document.getElementById('dealSelect');
+                dealSelect.innerHTML = '<option value="">Selecione um deal...</option>';
+                
+                allDeals.forEach(deal => {
+                    const option = document.createElement('option');
+                    option.value = deal.id;
+                    const dealName = deal.properties?.dealname || `Deal ${deal.id}`;
+                    const amount = deal.properties?.amount ? 
+                        `R$ ${parseFloat(deal.properties.amount).toLocaleString('pt-BR')}` : 'Sem valor';
+                    option.textContent = `${dealName} - ${amount}`;
+                    dealSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar deals:', error);
+                document.getElementById('dealSelect').innerHTML = '<option value="">Erro ao carregar deals</option>';
+            }
+        }
+
+        // Carregar contacts para o select
+        async function loadContactsForSelect() {
+            try {
+                const response = await fetch('/api/contacts');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                allContacts = await response.json();
+                
+                const contactSelect = document.getElementById('contactSelect');
+                contactSelect.innerHTML = '<option value="">Detectar automaticamente</option>';
+                
+                allContacts.forEach(contact => {
+                    const option = document.createElement('option');
+                    option.value = contact.id;
+                    const firstName = contact.properties?.firstname || '';
+                    const lastName = contact.properties?.lastname || '';
+                    const email = contact.properties?.email || '';
+                    const name = `${firstName} ${lastName}`.trim() || email || `Contact ${contact.id}`;
+                    option.textContent = name;
+                    contactSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar contacts:', error);
+                document.getElementById('contactSelect').innerHTML = '<option value="">Erro ao carregar contacts</option>';
+            }
+        }
+
+        // Analisar jornada do deal selecionado
+        async function analyzeSelectedJourney() {
+            const dealId = document.getElementById('dealSelect').value;
+            const contactId = document.getElementById('contactSelect').value;
+            
+            if (!dealId) {
+                showError('Por favor, selecione um deal');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                let url = `/api/journey/${dealId}`;
+                if (contactId) {
+                    url += `?contact_id=${contactId}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+
+                const journey = await response.json();
+                currentJourney = journey;
+                displayJourney(journey);
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                showError('Erro ao analisar jornada: ' + error.message);
+            }
+        }
+
+        // Carregar todos os deals para exploração
+        async function loadAllDeals() {
+            const dealsList = document.getElementById('dealsList');
+            dealsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando deals...</p></div>';
+            
+            try {
+                const response = await fetch('/api/deals');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const deals = await response.json();
+                
+                if (deals.length === 0) {
+                    dealsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">Nenhum deal encontrado</div>';
+                    return;
+                }
+                
+                dealsList.innerHTML = '';
+                
+                deals.forEach(deal => {
+                    const dealItem = document.createElement('div');
+                    dealItem.className = 'data-item';
+                    dealItem.onclick = () => selectDealFromList(deal);
+                    
+                    const dealName = deal.properties?.dealname || `Deal ${deal.id}`;
+                    const amount = deal.properties?.amount ? 
+                        `R$ ${parseFloat(deal.properties.amount).toLocaleString('pt-BR')}` : 'Sem valor';
+                    const stage = deal.properties?.dealstage || 'Sem stage';
+                    
+                    dealItem.innerHTML = `
+                        <div class="data-item-header">${dealName}</div>
+                        <div class="data-item-details">
+                            <span class="data-item-tag">💰 ${amount}</span>
+                            <span class="data-item-tag">📊 ${stage}</span>
+                            <span class="data-item-tag">🆔 ${deal.id}</span>
+                        </div>
+                    `;
+                    
+                    dealsList.appendChild(dealItem);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar deals:', error);
+                dealsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Erro ao carregar deals</div>';
+            }
+        }
+
+        // Carregar todos os contacts para exploração
+        async function loadAllContacts() {
+            const contactsList = document.getElementById('contactsList');
+            contactsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando contacts...</p></div>';
+            
+            try {
+                const response = await fetch('/api/contacts');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const contacts = await response.json();
+                
+                if (contacts.length === 0) {
+                    contactsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">Nenhum contact encontrado</div>';
+                    return;
+                }
+                
+                contactsList.innerHTML = '';
+                
+                contacts.forEach(contact => {
+                    const contactItem = document.createElement('div');
+                    contactItem.className = 'data-item';
+                    contactItem.onclick = () => selectContactFromList(contact);
+                    
+                    const firstName = contact.properties?.firstname || '';
+                    const lastName = contact.properties?.lastname || '';
+                    const email = contact.properties?.email || '';
+                    const name = `${firstName} ${lastName}`.trim() || 'Nome não informado';
+                    
+                    contactItem.innerHTML = `
+                        <div class="data-item-header">${name}</div>
+                        <div class="data-item-details">
+                            <span class="data-item-tag">📧 ${email}</span>
+                            <span class="data-item-tag">🆔 ${contact.id}</span>
+                        </div>
+                    `;
+                    
+                    contactsList.appendChild(contactItem);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar contacts:', error);
+                contactsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Erro ao carregar contacts</div>';
+            }
+        }
+
+        // Carregar dados do dashboard
+        async function loadDashboardData() {
+            try {
+                // Atualizar estatísticas
+                document.getElementById('totalDeals').textContent = allDeals.length;
+                document.getElementById('totalContacts').textContent = allContacts.length;
+                
+                // Calcular métricas simples
+                const avgAmount = allDeals.reduce((sum, deal) => {
+                    return sum + (parseFloat(deal.properties?.amount || 0));
+                }, 0) / (allDeals.length || 1);
+                
+                document.getElementById('averageScore').textContent = Math.round(avgAmount / 1000) + 'K';
+                
+                const closedWonDeals = allDeals.filter(deal => deal.properties?.dealstage === 'closedwon').length;
+                document.getElementById('activeClients').textContent = closedWonDeals;
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+            }
+        }
+
+        // Selecionar deal da lista
+        function selectDealFromList(deal) {
+            document.getElementById('dealSelect').value = deal.id;
+            switchTab('analyze');
+            
+            // Simular clique na aba de análise
+            const analyzeTabBtn = document.querySelector('.tab');
+            analyzeTabBtn.classList.add('active');
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                if (index !== 0) tab.classList.remove('active');
+            });
+            document.getElementById('analyzeTab').classList.add('active');
+            document.querySelectorAll('.tab-content').forEach((content, index) => {
+                if (index !== 0) content.classList.remove('active');
+            });
+        }
+
+        // Selecionar contact da lista
+        function selectContactFromList(contact) {
+            document.getElementById('contactSelect').value = contact.id;
+            switchTab('analyze');
+            
+            const analyzeTabBtn = document.querySelector('.tab');
+            analyzeTabBtn.classList.add('active');
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                if (index !== 0) tab.classList.remove('active');
+            });
+            document.getElementById('analyzeTab').classList.add('active');
+            document.querySelectorAll('.tab-content').forEach((content, index) => {
+                if (index !== 0) content.classList.remove('active');
+            });
+        }
+
+        // Funções de UI
+        function showLoading() {
+            document.getElementById('content').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analisando jornada do cliente...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    <strong>❌ Erro:</strong> ${message}
+                </div>
+            `;
+        }
+
+        function showMessage(message, type = 'info') {
+            const className = type === 'error' ? 'error' : 'success';
+            document.getElementById('content').innerHTML = `
+                <div class="${className}">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function hideMessage() {
+            document.getElementById('content').innerHTML = `
+                <div style="text-align: center; padding: 60px; color: #6c757d;">
+                    <h3>🚀 Pronto para Analisar!</h3>
+                    <p>Selecione um Deal ou explore seus dados do HubSpot nas abas acima.</p>
+                </div>
+            `;
+        }
+
+        // Exibir resultado da jornada
+        function displayJourney(journey) {
+            const scoreClass = journey.score >= 60 ? 'score-excellent' : 
+                              journey.score >= 30 ? 'score-good' : 'score-poor';
+            
+            const scoreLabel = journey.score >= 60 ? '✅ Excelente' : 
+                              journey.score >= 30 ? '⚠️ Médio' : '🔴 Atenção';
+
+            const content = `
+                <div class="journey-info">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="score-circle ${scoreClass}">
+                                ${journey.score}
+                            </div>
+                            <div class="info-label">Score da Jornada</div>
+                            <div class="info-value">${scoreLabel}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Cliente</div>
+                            <div class="info-value">${journey.metadata.contactName || 'N/A'}</div>
+                            <div style="font-size: 0.9rem; color: #6c757d; margin-top: 5px;">
+                                ${journey.metadata.contactEmail || ''}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Valor do Deal</div>
+                            <div class="info-value">R$ ${(journey.metadata.dealAmount || 0).toLocaleString('pt-BR')}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Tempo no Stage</div>
+                            <div class="info-value">${journey.metadata.daysInCurrentStage || 0} dias</div>
+                        </div>
+                    </div>
+                    
+                    ${journey.indicators.length > 0 ? `
+                        <div class="indicators">
+                            ${journey.indicators.map(indicator => `<span class="indicator">${indicator}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="journey-board">
+                    ${stages.map(stage => `
+                        <div class="stage-card ${journey.stage === stage.id ? 'active' : ''}">
+                            <div class="stage-header">
+                                <div class="stage-title">${stage.name}</div>
+                                ${journey.stage === stage.id ? '<span class="current-badge">ATUAL</span>' : ''}
+                            </div>
+                            <div class="substages">
+                                ${stage.substages.map(substage => `
+                                    <div class="substage ${journey.stage === stage.id && journey.substageName === substage ? 'active' : ''}">
+                                        ${journey.stage === stage.id && journey.substageName === substage ? '▶ ' : ''}${substage}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${journey.recommendations.length > 0 ? `
+                    <div class="recommendations">
+                        <h3>💡 Próximos Passos Recomendados</h3>
+                        <ul>
+                            ${journey.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-secondary" onclick="analyzeSelectedJourney()">
+                        🔄 Atualizar Análise
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = content;
+        }
+    </script>
+</body>
+</html>
